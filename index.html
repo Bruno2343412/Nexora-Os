@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>business os - Analytics & Performance</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- PORTAL DE AUTENTICAÇÃO SAAS (LOGIN / CRIAR CONTA) -->
+  <div class="auth-overlay active" id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">B</div>
+        <h1>business<span>os</span></h1>
+        <p>Plataforma Corporativa de Inteligência & Gestão</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tab-login" onclick="mudarAbaAuth('login')">Já tenho conta</button>
+        <button type="button" class="auth-tab" id="tab-register" onclick="mudarAbaAuth('register')">Criar conta</button>
+      </div>
+
+      <div id="auth-alert" class="auth-alert"></div>
+
+      <form id="form-login" class="auth-form active">
+        <div class="auth-group">
+          <label>E-mail corporativo</label>
+          <input type="email" id="login-email" placeholder="seu@email.com" required>
+        </div>
+        <div class="auth-group">
+          <label>Senha de acesso</label>
+          <input type="password" id="login-senha" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="auth-submit-btn">Entrar no Painel</button>
+      </form>
+
+      <form id="form-register" class="auth-form">
+        <div class="auth-group">
+          <label>Seu Nome / Empresa</label>
+          <input type="text" id="reg-nome" placeholder="Ex: Silva Digital" required>
+        </div>
+        <div class="auth-group">
+          <label>E-mail corporativo</label>
+          <input type="email" id="reg-email" placeholder="seu@email.com" required>
+        </div>
+        <div class="auth-group">
+          <label>Crie uma Senha (mín. 4 caracteres)</label>
+          <input type="password" id="reg-senha" placeholder="••••••••" minlength="4" required>
+        </div>
+        <button type="submit" class="auth-submit-btn">Criar Conta e Acessar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo-icon">B</div>
+        <div class="brand-text">
+          <h1>business<span>os</span></h1>
+        </div>
+      </div>
+
+      <div class="workspace-selector">
+        <span>Conta Ativa</span>
+        <div class="workspace-box">
+          <strong id="user-display-name">Operação Matriz</strong>
+          <small id="user-display-email">admin@businessos.com</small>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-item active" data-target="view-resumo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Resumo & BI
+        </button>
+        <button type="button" class="nav-item" data-target="view-financeiro">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Despesas & Caixa
+        </button>
+        <button type="button" class="nav-item" data-target="view-vendas">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Vendas & Funil
+        </button>
+        <button type="button" class="nav-item" data-target="view-taxas">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+          Taxas & Segurança
+        </button>
+        <button type="button" class="nav-item" data-target="view-clientes">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Clientes (CRM)
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" class="btn-lock-app" onclick="sairDaConta()">
+          🚪 Sair / Bloquear Conta
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+      
+      <header class="topbar">
+        <div class="topbar-left">
+          <h2 id="page-title">Dashboard - Principal</h2>
+        </div>
+
+        <div class="topbar-right">
+          <button type="button" class="btn-security-toggle" id="btn-toggle-lock" onclick="alternarModoLeitura()" title="Ativar/Desativar Modo Somente Leitura">
+            <span id="lock-icon">🔓</span>
+            <span id="lock-text">Edição Liberada</span>
+          </button>
+
+          <div class="goal-widget">
+            <div class="goal-info">
+              <span class="goal-badge">Prêmios</span>
+              <span id="meta-texto">R$ 0,00 / R$ 1.000.000,00</span>
+            </div>
+            <div class="goal-bar-bg">
+              <div class="goal-bar-fill" id="meta-barra" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <button type="button" class="btn-primary protecao-edicao" id="btn-nova-operacao">+ Novo Lançamento</button>
+        </div>
+      </header>
+
+      <div class="views-container">
+
+        <!-- VIEW 1: RESUMO & BI -->
+        <section id="view-resumo" class="view-pane active">
+          
+          <div class="section-header-bar">
+            <h3>Resumo & Inteligência de Negócio</h3>
+            <span class="sync-status">BI 100% Automatizado</span>
+          </div>
+
+          <div id="smart-alert-box" class="smart-alert warning" style="display: none;">
+            <span class="alert-icon">⚠️</span>
+            <div class="alert-content">
+              <strong>Atenção Executiva:</strong> <span id="smart-alert-text">ROAS abaixo da meta de segurança (1.5x). Reveja seus criativos e campanhas.</span>
+            </div>
+          </div>
+
+          <div class="filters-grid">
+            <div class="filter-item">
+              <label>Período de Visualização</label>
+              <select id="filtro-periodo" onchange="atualizarInterface()">
+                <option value="todos">Todo o período</option>
+                <option value="hoje">Hoje</option>
+                <option value="7dias">Últimos 7 dias</option>
+                <option value="mes">Este Mês</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>Fonte de Tráfego / Canal</label>
+              <select id="filtro-canal" onchange="atualizarInterface()">
+                <option value="todos">Qualquer</option>
+                <option value="Meta Ads">Meta Ads</option>
+                <option value="Google Ads">Google Ads</option>
+                <option value="TikTok Ads">TikTok Ads</option>
+                <option value="Direto / Orgânico">Direto / Orgânico</option>
+              </select>
+            </div>
+            <div class="filter-item">
+              <label>Categoria</label>
+              <select id="filtro-tipo" onchange="atualizarInterface()">
+                <option value="todos">Todas as operações</option>
+                <option value="receita">Apenas Receitas</option>
+                <option value="anuncio">Gastos com Anúncios</option>
+                <option value="despesa">Outras Despesas</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kpi-grid-top">
+            <div class="kpi-card">
+              <span class="kpi-title">Faturamento Bruto</span>
+              <strong class="kpi-val" id="kpi-faturamento">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">Gastos com anúncios</span>
+              <strong class="kpi-val" id="kpi-ads">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">ROAS</span>
+              <strong class="kpi-val highlight-cyan" id="kpi-roas">0.00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">ROI</span>
+              <strong class="kpi-val highlight-cyan" id="kpi-roi">0.00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">Margem</span>
+              <strong class="kpi-val highlight-cyan" id="kpi-margem">0.0%</strong>
+            </div>
+          </div>
+
+          <div class="kpi-grid-bottom">
+            <div class="kpi-card">
+              <span class="kpi-title">Vendas Pendentes</span>
+              <strong class="kpi-val" id="kpi-pendentes">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">Imposto sobre vendas (<span id="label-taxa-venda">6</span>%)</span>
+              <strong class="kpi-val" id="kpi-imposto-venda">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">Imposto Ads (<span id="label-taxa-ads">12</span>%)</span>
+              <strong class="kpi-val" id="kpi-imposto-ads">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card highlight-border">
+              <span class="kpi-title">Lucro Líquido</span>
+              <strong class="kpi-val highlight-green" id="kpi-lucro">R$ 0,00</strong>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-title">ARPU (Ticket Médio)</span>
+              <strong class="kpi-val" id="kpi-arpu">R$ 0,00</strong>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Performance por Canal</h3>
+                <span class="panel-sub">Receita vs Investimento</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="graficoPerformance"></canvas>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Tendência Temporal</h3>
+                <span class="panel-sub">Evolução do Faturamento & Lucro (Dia a Dia)</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="graficoTendencia"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3>Histórico de Operações</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Canal</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-resumo"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- VIEW 2: DESPESAS & CAIXA -->
+        <section id="view-financeiro" class="view-pane">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3>Extrato Completo de Entradas e Saídas</h3>
+              <button type="button" class="btn-primary protecao-edicao" onclick="abrirModal('modal-operacao')">+ Novo Lançamento</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Canal</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-financeiro"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: VENDAS & FUNIL -->
+        <section id="view-vendas" class="view-pane">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3>Vendas Pendentes & Pipeline</h3>
+              <button type="button" class="btn-primary protecao-edicao" onclick="abrirModal('modal-venda')">+ Nova Venda / Pedido</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Produto / Oferta</th>
+                    <th>Cliente</th>
+                    <th>Origem</th>
+                    <th>Status</th>
+                    <th>Valor</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-vendas"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: TAXAS & SEGURANÇA -->
+        <section id="view-taxas" class="view-pane">
+          <div class="security-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Alíquotas e Impostos</h3>
+              </div>
+              <form id="form-taxas">
+                <div class="form-group">
+                  <label>Imposto sobre Vendas / Gateway (%)</label>
+                  <input type="number" id="config-taxa-venda" step="0.1" value="6.0" required>
+                </div>
+                <div class="form-group">
+                  <label>Imposto sobre Gastos com Anúncios (%)</label>
+                  <input type="number" id="config-taxa-ads" step="0.1" value="12.0" required>
+                </div>
+                <button type="submit" class="btn-primary protecao-edicao">Salvar Alíquotas</button>
+              </form>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Alterar Senha da Conta</h3>
+              </div>
+              <form id="form-senha">
+                <div class="form-group">
+                  <label>Senha Atual</label>
+                  <input type="password" id="senha-atual" required>
+                </div>
+                <div class="form-group">
+                  <label>Nova Senha</label>
+                  <input type="password" id="senha-nova" minlength="4" required>
+                </div>
+                <button type="submit" class="btn-primary">Atualizar Senha</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: CLIENTES -->
+        <section id="view-clientes" class="view-pane">
+          <div class="panel-card">
+            <div class="panel-header">
+              <h3>Base de Clientes</h3>
+              <button type="button" class="btn-primary protecao-edicao" onclick="abrirModal('modal-cliente')">+ Cadastrar Cliente</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Telefone</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-clientes"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAIS -->
+  <div class="modal-backdrop" id="modal-operacao">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Novo Lançamento</h3>
+        <button type="button" class="close-modal" onclick="fecharModal('modal-operacao')">&times;</button>
+      </div>
+      <form id="form-operacao">
+        <div class="form-group">
+          <label>Descrição</label>
+          <input type="text" id="op-desc" placeholder="Ex: Venda Produto X / Campanha Escala" required>
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="op-tipo">
+            <option value="receita">Faturamento / Venda Aprovada (Entrada)</option>
+            <option value="anuncio">Gasto com Anúncios / Tráfego (Saída)</option>
+            <option value="despesa">Despesa Operacional / Fixa (Saída)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fonte de Tráfego / Canal</label>
+          <select id="op-canal">
+            <option value="Meta Ads">Meta Ads</option>
+            <option value="Google Ads">Google Ads</option>
+            <option value="TikTok Ads">TikTok Ads</option>
+            <option value="Direto / Orgânico">Direto / Orgânico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="op-valor" step="0.01" placeholder="1250.00" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModal('modal-operacao')">Cancelar</button>
+          <button type="submit" class="btn-primary">Registrar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-venda">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Registrar Pedido / Venda</h3>
+        <button type="button" class="close-modal" onclick="fecharModal('modal-venda')">&times;</button>
+      </div>
+      <form id="form-venda">
+        <div class="form-group">
+          <label>Produto / Oferta</label>
+          <input type="text" id="venda-produto" required>
+        </div>
+        <div class="form-group">
+          <label>Cliente</label>
+          <input type="text" id="venda-cliente" required>
+        </div>
+        <div class="form-group">
+          <label>Origem (UTM)</label>
+          <select id="venda-canal">
+            <option value="Meta Ads">Meta Ads</option>
+            <option value="Google Ads">Google Ads</option>
+            <option value="TikTok Ads">TikTok Ads</option>
+            <option value="Direto / Orgânico">Direto / Orgânico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status do Pagamento</label>
+          <select id="venda-status">
+            <option value="Aprovada">Aprovada (Soma no Faturamento)</option>
+            <option value="Pendente">Pendente (Boleto / Pix Gerado)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="venda-valor" step="0.01" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModal('modal-venda')">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar Pedido</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-cliente">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Novo Cliente</h3>
+        <button type="button" class="close-modal" onclick="fecharModal('modal-cliente')">&times;</button>
+      </div>
+      <form id="form-cliente">
+        <div class="form-group">
+          <label>Nome</label>
+          <input type="text" id="cli-nome" required>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="cli-email" required>
+        </div>
+        <div class="form-group">
+          <label>Telefone</label>
+          <input type="text" id="cli-tel" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="fecharModal('modal-cliente')">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
