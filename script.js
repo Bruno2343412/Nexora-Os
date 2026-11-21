@@ -1,12 +1,23 @@
-// --- BANCO DE DADOS LOCAL & USUÁRIOS ---
-let usuarios = JSON.parse(localStorage.getItem('bos_utm_usuarios')) || [];
-let usuarioLogado = JSON.parse(localStorage.getItem('bos_utm_sessao')) || null;
+// --- CONFIGURAÇÃO DO FIREBASE ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAPoOlv-mub_pmnOjNTQgxDbjFur2NmEdY",
+  authDomain: "nexora-os-a6c46.firebaseapp.com",
+  projectId: "nexora-os-a6c46",
+  storageBucket: "nexora-os-a6c46.firebasestorage.app",
+  messagingSenderId: "204169799274",
+  appId: "1:204169799274:web:eb46867b5df42d33afcc13",
+  measurementId: "G-YMZQP33KQR"
+};
 
-let operacoes = JSON.parse(localStorage.getItem('bos_utm_operacoes')) || [];
-let vendas = JSON.parse(localStorage.getItem('bos_utm_vendas')) || [];
-let clientes = JSON.parse(localStorage.getItem('bos_utm_clientes')) || [];
+// Inicializar Firebase Firestore
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-let config = JSON.parse(localStorage.getItem('bos_utm_config')) || {
+// --- BANCO DE DADOS EM TEMPO REAL (SEM LOGIN) ---
+let operacoes = [];
+let vendas = [];
+let clientes = [];
+let config = {
   metaFixa: 1000000.0,
   taxaVenda: 6.0,
   taxaAds: 12.0,
@@ -16,144 +27,46 @@ let config = JSON.parse(localStorage.getItem('bos_utm_config')) || {
 let graficoPerformance = null;
 let graficoTendencia = null;
 
-// --- SISTEMA DE LOGIN & CRIAR CONTA ---
-const authScreen = document.getElementById('auth-screen');
-const authAlert = document.getElementById('auth-alert');
+const docRef = db.collection("nexora_db").doc("dados_globais");
 
-function mudarAbaAuth(aba) {
-  if (!authAlert) return;
-  authAlert.style.display = 'none';
-  document.getElementById('tab-login').classList.toggle('active', aba === 'login');
-  document.getElementById('tab-register').classList.toggle('active', aba === 'register');
-  document.getElementById('form-login').classList.toggle('active', aba === 'login');
-  document.getElementById('form-register').classList.toggle('active', aba === 'register');
-}
+// Sincronização em tempo real (Firestore onSnapshot)
+docRef.onSnapshot((doc) => {
+  if (doc.exists) {
+    const data = doc.data();
+    operacoes = data.operacoes || [];
+    vendas = data.vendas || [];
+    clientes = data.clientes || [];
+    config = data.config || config;
 
-function mostrarErroAuth(msg) {
-  authAlert.innerText = msg;
-  authAlert.style.display = 'block';
-}
+    aplicarEstadoModoLeitura();
+    atualizarInterface();
+  } else {
+    salvarDados();
+  }
+}, (error) => {
+  console.error("Erro ao sincronizar com o Firebase:", error);
+});
 
-const formRegister = document.getElementById('form-register');
-if (formRegister) {
-  formRegister.addEventListener('submit', e => {
-    e.preventDefault();
-    const nome = document.getElementById('reg-nome').value.trim();
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();
-    const senha = document.getElementById('reg-senha').value;
-
-    if (usuarios.some(u => u.email === email)) {
-      mostrarErroAuth('Este e-mail já possui uma conta cadastrada.');
-      return;
-    }
-
-    const novoUsuario = { nome, email, senha };
-    usuarios.push(novoUsuario);
-    localStorage.setItem('bos_utm_usuarios', JSON.stringify(usuarios));
-
-    iniciarSessao(novoUsuario);
+function salvarDados() {
+  const payload = { operacoes, vendas, clientes, config };
+  docRef.set(payload).catch((error) => {
+    console.error("Erro ao salvar no Firestore:", error);
   });
-}
-
-const formLogin = document.getElementById('form-login');
-if (formLogin) {
-  formLogin.addEventListener('submit', e => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const senha = document.getElementById('login-senha').value;
-
-    const user = usuarios.find(u => u.email === email && u.senha === senha);
-    if (!user) {
-      mostrarErroAuth('E-mail ou senha incorretos.');
-      return;
-    }
-
-    iniciarSessao(user);
-  });
-}
-
-function iniciarSessao(user) {
-  usuarioLogado = user;
-  localStorage.setItem('bos_utm_sessao', JSON.stringify(user));
-  document.getElementById('user-display-name').innerText = user.nome;
-  document.getElementById('user-display-email').innerText = user.email;
-  authScreen.classList.remove('active');
-  if (document.getElementById('form-login')) document.getElementById('form-login').reset();
-  if (document.getElementById('form-register')) document.getElementById('form-register').reset();
-  if (authAlert) authAlert.style.display = 'none';
   atualizarInterface();
 }
 
-function sairDaConta() {
-  usuarioLogado = null;
-  localStorage.removeItem('bos_utm_sessao');
-  authScreen.classList.add('active');
-  mudarAbaAuth('login');
-}
-
-if (usuarioLogado) {
-  iniciarSessao(usuarioLogado);
-} else if (usuarios.length === 0) {
-  mudarAbaAuth('register');
-} else {
-  authScreen.classList.add('active');
-  mudarAbaAuth('login');
-}
-
-// Alterar senha
-const formSenha = document.getElementById('form-senha');
-if (formSenha) {
-  formSenha.addEventListener('submit', e => {
-    e.preventDefault();
-    if (!usuarioLogado) return;
-
-    const atual = document.getElementById('senha-atual').value;
-    const nova = document.getElementById('senha-nova').value;
-
-    if (atual !== usuarioLogado.senha) {
-      alert('A senha atual está incorreta!');
-      return;
-    }
-
-    usuarioLogado.senha = nova;
-    const idx = usuarios.findIndex(u => u.email === usuarioLogado.email);
-    if (idx !== -1) usuarios[idx].senha = nova;
-
-    localStorage.setItem('bos_utm_usuarios', JSON.stringify(usuarios));
-    localStorage.setItem('bos_utm_sessao', JSON.stringify(usuarioLogado));
-    formSenha.reset();
-    alert('Senha atualizada com sucesso!');
-  });
-}
-
-// --- MODO SOMENTE LEITURA SIMPLIFICADO (SEM SENHA) ---
-function aplicarEstadoModoLeitura() {
-  const btn = document.getElementById('btn-toggle-lock');
-  const icon = document.getElementById('lock-icon');
-  const text = document.getElementById('lock-text');
-  if (!btn) return;
-
-  if (config.modoLeitura) {
-    document.body.classList.add('modo-leitura');
-    btn.classList.add('locked');
-    icon.innerText = '🔒';
-    text.innerText = 'Somente Leitura';
-  } else {
-    document.body.classList.remove('modo-leitura');
-    btn.classList.remove('locked');
-    icon.innerText = '🔓';
-    text.innerText = 'Edição Liberada';
-  }
-}
-
-function alternarModoLeitura() {
-  config.modoLeitura = !config.modoLeitura;
-  salvarDados();
-  aplicarEstadoModoLeitura();
-}
-
-// --- NAVEGAÇÃO ENTRE TELAS GARANTIDA ---
+// --- GARANTIR QUE A TELA DE LOGIN SUMA ---
 document.addEventListener('DOMContentLoaded', () => {
+  const authScreen = document.getElementById('auth-screen');
+  if (authScreen) {
+    authScreen.classList.remove('active'); // Oculta a tela de login permanentemente
+    authScreen.style.display = 'none';
+  }
+
+  inicializarNavegacao();
+});
+
+function inicializarNavegacao() {
   const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
   const viewPanes = document.querySelectorAll('.view-pane');
 
@@ -192,7 +105,33 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-});
+}
+
+// --- MODO SOMENTE LEITURA ---
+function aplicarEstadoModoLeitura() {
+  const btn = document.getElementById('btn-toggle-lock');
+  const icon = document.getElementById('lock-icon');
+  const text = document.getElementById('lock-text');
+  if (!btn) return;
+
+  if (config.modoLeitura) {
+    document.body.classList.add('modo-leitura');
+    btn.classList.add('locked');
+    if (icon) icon.innerText = '🔒';
+    if (text) text.innerText = 'Somente Leitura';
+  } else {
+    document.body.classList.remove('modo-leitura');
+    btn.classList.remove('locked');
+    if (icon) icon.innerText = '🔓';
+    if (text) text.innerText = 'Edição Liberada';
+  }
+}
+
+function alternarModoLeitura() {
+  config.modoLeitura = !config.modoLeitura;
+  salvarDados();
+  aplicarEstadoModoLeitura();
+}
 
 // --- MODAIS ---
 function abrirModal(id) {
@@ -367,14 +306,6 @@ function excluirCliente(id) {
   if (!confirm('Deseja realmente excluir este cliente?')) return;
   clientes = clientes.filter(c => c.id !== id);
   salvarDados();
-}
-
-function salvarDados() {
-  localStorage.setItem('bos_utm_operacoes', JSON.stringify(operacoes));
-  localStorage.setItem('bos_utm_vendas', JSON.stringify(vendas));
-  localStorage.setItem('bos_utm_clientes', JSON.stringify(clientes));
-  localStorage.setItem('bos_utm_config', JSON.stringify(config));
-  atualizarInterface();
 }
 
 // --- CÁLCULO DE BI + SMART ALERTS + FILTROS ---
@@ -596,7 +527,7 @@ function renderizarGrafico(lista = operacoes) {
   });
 }
 
-// --- GRÁFICO DE TENDÊNCIA TEMPORAL (LINHA DIA A DIA) ---
+// --- GRÁFICO DE TENDÊNCIA TEMPORAL ---
 function renderizarTendencia(lista = operacoes) {
   const canvas = document.getElementById('graficoTendencia');
   if (!canvas) return;
@@ -652,7 +583,3 @@ function renderizarTendencia(lista = operacoes) {
     }
   });
 }
-
-// Inicializa
-aplicarEstadoModoLeitura();
-atualizarInterface();
